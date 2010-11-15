@@ -2,23 +2,8 @@
 
 #Copyright (c) 2010, Timothy G. Flynn
 #All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
 #
-#    * Redistributions of source code must retain the above copyright notice,
-#      this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright notice,
-#      this list of conditions and the following disclaimer in the documentation and/or
-#      other materials provided with the distribution.
-
-#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-#INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-#SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-#SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-#WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-#USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# See the file license.txt for license terms.
 
 """
 This program reads a vocabulary file and a dataset file in the format defined by the Metoptimize NLP challenge
@@ -34,31 +19,23 @@ import sys
 import os
 import math
 import re
+import time
 
 from optparse import OptionParser
 
-def loadVocabulary( filename ):
-    voc = {}
-    f = file( filename )
-    lineCount = 0
-    invalidLines = []
-    for l in f:
-        try:
-            fields = re.split( r'\s+', l.strip() )
-            if len( fields ) != 2:
-                invalidLines.append( lineCount )
-                lineCount += 1
-                continue
-            count = int( fields[0].strip() )
-            word = fields[1].strip()
-            voc[ word ] = count
-            lineCount += 1
-        except:
-            print "Exception ocurred at line: %d" % ( lineCount )
-            print "Line : %s" % ( l )
-            invalidLines.append( lineCount )
-    f.close()
-    return voc
+from NLPC import loadVocabulary,TIC,TOC
+
+
+def topn( l, n ):
+    v = [ [ None, 0.0 ] for x in range( n ) ]
+    for i in range( n ):
+        for x in l:
+            score = x[1]
+            if ( score > v[i][1] ) and ( ( i == 0 ) or ( score < v[i-1][1] ) ):
+                v[i][0] = x[0]
+                v[i][1] = score
+    return v
+    
 
 def generateFrequencies( voc, filename ):
     frequencies = {}
@@ -91,14 +68,54 @@ def dumpMatrix( frequencies, filename ):
         v.sort( key = lambda x: x[1], reverse = True )
         f.write( "%s " % ( w ) )
         for pair in v[ 0: min( len(v), 10 ) ]:
-            f.write( "%s " % ( pair[0] ) )
+            if pair[0] is not None:
+                f.write( "%s " % ( pair[0] ) )
         f.write( "\n" )
     f.close()
+
+def filterFile( inputFilename, outputFilename ):
+    fin = file( inputFilename )
+    fout = file( outputFilename, 'w' )
+    for l in fin:
+        words = [ x.strip() for x in re.split( r'\s+', l.strip() ) ]
+        #print 'words = ',words
+        filtered = [ w for w in words if ( re.match( r'^[a-zA-Z]*$', w ) != None ) ]
+        #print 'filtered = ',filtered
+        if len( filtered ) > 0:
+            for w in filtered:
+                fout.write( '%s ' % ( w ) )
+            fout.write( '\n' )
+    fout.close()
+    fin.close()
+
+def makeVocabulary( inputFilename, outputFilename ):
+    fin = file( inputFilename )
+
+    wordMap = {}
+    for l in fin:
+        words = [ x.strip() for x in re.split( r'\s+', l.strip() ) ]
+        for w in words:
+            if not wordMap.has_key( w ):
+                wordMap[ w ] = { 'count' : 0 }
+            wordMap[w]['count'] += 1
+    fin.close()
+    wordList = wordMap.keys()
+    wordList.sort()
+    fout = file( outputFilename, 'w' )
+    for w in wordList:
+        fout.write( '%d %s\n' % ( wordMap[w]['count'], w ) )
+    fout.close()
                         
 if __name__ == "__main__":
 
     parser = OptionParser()
 
+    parser.add_option( "-f",
+                       "--filter-filename",
+                       dest = "filterFilename",
+                       action = "store",
+                       help = "File to filter" )
+    
     parser.add_option( "-d",
                        "--dataset-filename",
                        dest = "datasetFilename",
@@ -116,9 +133,26 @@ if __name__ == "__main__":
                        dest = "vocabularyFilename",
                        action = "store",
                        help = "Vocabulary file" )
+
+    parser.add_option( "-m",
+                       "--make-vocabulary",
+                       dest = "makeVocabulary",
+                       action = "store_true",
+                       default = False,
+                       help = "Make vocabulary file" )
     
     (options,args) = parser.parse_args()
 
+    if options.filterFilename and options.outputFilename:
+        print "Filtering %s -> %s" % ( options.filterFilename, options.outputFilename )
+        filterFile( options.filterFilename, options.outputFilename )
+        sys.exit( 0 )
+
+    if options.makeVocabulary and options.datasetFilename and options.outputFilename:
+        print "Creating vocabulary file %s -> %s" % ( options.datasetFilename, options.outputFilename )
+        makeVocabulary( options.datasetFilename, options.outputFilename )
+        sys.exit( 0 )
+    
     if options.datasetFilename is None:
         print "ERROR: No dataset file supplied"
         sys.exit( -1 )
@@ -131,10 +165,15 @@ if __name__ == "__main__":
         print "ERROR: No vocabulary file supplied"
         sys.exit( -1 )
 
+    t = TIC()
     voc = loadVocabulary( options.vocabularyFilename )
+    TOC( t, "loadVocabulary" )
 
+    t = TIC()
     frequencies = generateFrequencies( voc, options.datasetFilename )
+    TOC( t, "generateFrequencies" )
 
+    t = TIC()
     dumpMatrix( frequencies, options.outputFilename )
-    
+    TOC( t, "dumpMatrix" )
 
