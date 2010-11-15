@@ -21,10 +21,24 @@ Create a new vocabulary file from a dataset file
 ./process.py -d <dataset file> -o <output file> -m
 
 
-score.py scores an output file based on Word Net synset similarity scores.
+score.py scores an output file based on Word Net (http://wordnet.princeton.edu) synset similarity scores.
 
 USAGE:
 
 ./score.py -i <output file>
 
 See the file license.txt for copyright information and license terms.
+
+DEPENDENCIES:
+
+score.py requires that the nltk toolkit be installed (http://nltk.googlecode.com).
+
+You also need to download the WordNet data files before running score.py.  As follows :
+
+python
+>>> import nltk
+>>> nltk.download()
+Downloader>  d
+Downloader>  all
+Downloader>  q
+>>> quit()
