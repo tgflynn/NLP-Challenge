@@ -36,6 +36,9 @@ from nltk.corpus import wordnet
 
 import NLPC
 
+def compareWords( word1, word2 ):
+    return scoreWord( wordnet.synsets( word1.lower() ), wordnet.synsets( word2.lower() ) )
+    
 def scoreWord( baseSynsets, targetSynsets ):
     bestScore = 0
     for baseSynset in baseSynsets:
@@ -84,6 +87,13 @@ if __name__ == "__main__":
     
     parser = OptionParser()
 
+    parser.add_option( "-c",
+                       "--compare-words",
+                       dest = "compareWords",
+                       action = "store_true",
+                       default = False,
+                       help = "Compare two words specified on command line (space separated)" )
+    
     parser.add_option( "-i",
                        "--input-filename",
                        dest = "inputFilename",
@@ -106,6 +116,13 @@ if __name__ == "__main__":
     
     (options,args) = parser.parse_args()
 
+    if options.compareWords:
+        word1 = args[0]
+        word2 = args[1]
+        print "%s / %s : score = %f" % ( word1, word2, compareWords( word1, word2 ) )
+        sys.exit( 0 )
+        
+    
     if not options.inputFilename:
         print "ERROR: No input file provided"
         sys.exit( -1 )
