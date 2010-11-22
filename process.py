@@ -125,7 +125,7 @@ def generateSimilarityFile( words, frequencies, filename ):
         row1 = frequencies[word1]
         similar = []
         for word2 in neighbors:
-            if not frequencies.has_key( word2 ):
+            if ( word1 == word2 ) or ( not frequencies.has_key( word2 ) ):
                 continue
             row2 = frequencies[word2]
             simScore = sparseDistance( row1, row2 )
