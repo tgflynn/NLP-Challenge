@@ -59,6 +59,9 @@ def scoreFile( filename, targetWords, verbose = False ):
         if baseSynsets is None:
             continue
         for word in fields[1:]:
+            # Ignore identical word if it occurs
+            if word == fields[0]:
+                continue
             targetSynsets = wordnet.synsets( word )
             if targetSynsets is None:
                 continue

@@ -13,6 +13,24 @@ def TOC( t1, name = "Unnamed" ):
     deltat = t2 - t1
     print "Time Interval : %50s : Elapsed seconds : %f" % ( name, deltat )
 
+def countLines( filename ):
+    f = file( filename )
+    lineCount = 0
+    for l in f:
+        lineCount += 1
+    return lineCount
+
+def makePath( path ):
+    (head,tail) = os.path.split( path )
+    if not head:
+        if not os.path.exists( path ):
+            os.mkdir( path )
+            return
+    if not os.path.exists( head ):
+        makePath( head )
+    if not os.path.exists( path ):
+        os.mkdir( path )
+
 def loadVocabulary( filename ):
     voc = {}
     f = file( filename )
